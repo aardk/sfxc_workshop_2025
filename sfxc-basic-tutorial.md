@@ -47,19 +47,19 @@ onload = function(){
 ## Introduction
 
 In this tutorial we will go through all the steps required to correlate a simple experiment.  This entails the following steps:
-- create a vex file suitable for sfxc
+- create a vex file suitable for SFXC
 - create a correlator control file
 - clock search the experiment
 - do the final correlation
 
-We will also inspect the correlator output using tool from the sfxc distribution.  Converting this data to
+We will also inspect the correlator output using tool from the SFXC distribution.  Converting this data to
 FITS for use with AIPS or CASA will be subject of a later tutorial
 
 ## Optional: Install SFXC
 
 This step is only necessary when this tutorial is followed on your hardware, SFXC is already installed on the workshop cluster.
 
-The current prerequisites for SFXC on a recent Debian based system (like Ubuntu) is
+The current prerequisites for SFXC on a recent Debian based system (like Ubuntu) are
 
 ```bash
 apt-get install -y python3 python3-pip build-essential git flex bison \
@@ -110,6 +110,7 @@ When doing this tutorial on your own hardware the data for the tutorial can be d
 ```bash
 wget -r -nd https://archive.jive.eu/sfxc-workshop/n24l2/ -A "n24l2*"
 ```
+or by manually downloading the files from `https://archive.jive.eu/sfxc-workshop/n24l2/` using a web browser.
 
 ## Create vex file
 While vex files drive both the correlator and observing stations, the vex files created by 
@@ -118,7 +119,7 @@ by the correlator. For example, it is missing the `$CLOCKS` and `$EOP` sections 
 not known at time of scheduling. Furthermore, it is missing the appropriate `$THREADS`,  and or
 `$BITSTREAMS` sections as stations do not use this information directly.
 
-In the sfxc distribution there is a program called `prepare_vex.py` which take an observing vex 
+In the SFXC distribution there is a program called `prepare_vex.py` which take an observing vex 
 file created by `(py)sched` and adds these missing sections to the vex file. It will
 - Add a `$CLOCKS` section with all delays and rates set to zero
 - Fetch EOP information from the [internet](ftps://gdc.cddis.eosdis.nasa.gov/vlbi/gsfc/ancillary/solve_apriori/usno_finals.erp) and create an `$EOP` section
@@ -347,7 +348,7 @@ The start- and stop times in the above control file are the start of scan no0004
 However, we have only some short snippets of data, so we would like to modify the start- and stop times to only include the
 time ranges for which we have data.
 
-The raw vdif data can be inspected using the tool `vdif_print_headers`. For Mark5B and Mark5A data there are similar tools: `mark5a_print_headers`, and `mark5b_print_headers`.
+The raw VDIF data can be inspected using the tool `vdif_print_headers`. For Mark5B and Mark5A data there are similar tools: `mark5a_print_headers`, and `mark5b_print_headers`.
 
 Lets have a look at the first data file for Ef (the most sensitive station in the array)
 ```bash
@@ -365,7 +366,7 @@ we don't expect full weights for the first integration.
 
 We can do a similar inspection for the other data file `/data/n24l2/files/n24l2_ef_no0005`, this shows that this file ends at 2024y144d12h47m13.000s.
 
-Looking at vdif files using this tool is also a way to find out what the exact data format was. 
+Looking at VDIF files using this tool is also a way to find out what the exact data format was. 
 In this case there is only a single VDIF thread (`thread_id = 0`), containing 8 channels per frame (`nchan = 8`),
 matching what is in the `$THREADS` section of the vex file. VDIF frames can also be marked as invalid, in that case `invalid = 1`. 
 Invalid frames are flagged by the correlator and their data replaced with zeros.
@@ -377,7 +378,7 @@ Inspecting the first data file for station Cm shows
 2024y144d12h41m41.000s ,frame_nr = 3119, thread_id = 1, nchan = 1, invalid = 0, legacy = 0, station = Cm, complex = 0, bps-1 = 1, data_size = 8032
 2024y144d12h41m41.000s ,frame_nr = 3119, thread_id = 0, nchan = 1, invalid = 0, legacy = 0, station = Cm, complex = 0, bps-1 = 1, data_size = 8032
 ```
-This file contains two vdif threads, with each thread containing a single channel. This again matches what is in the vex file.  
+This file contains two VDIF threads, with each thread containing a single channel. This again matches what is in the vex file.  
 However, a common failure mode is that the `thread_id` in the data does not match the `thread_id` which is in the `$THREADS` section of the vex file.
 Below we can see that in this case they match (the `thread_id` is the first number in the `thread = ` statements). But if the correlator assigns zero
 weights for one or more channels while the start times of the correlation is correct it is likely that the `thread_id` was wrong in the vex file.
@@ -395,7 +396,7 @@ enddef;
 ## Run the correlator
 
 ### Generating the delay model
-The sfxc delay generation program needs a number of data files which are part
+The SFXC delay generation program needs a number of data files which are part
 of SFXC distribution. In the source code distribution they located in `sfxc/lib/calc10/data`. On our cluster we
 have put these files in the director `/opt/sfxc/calc`. 
 
@@ -671,16 +672,16 @@ enddef;
 ```
 
 A word of warning though, in this case we applied the clock rates as found by `simple_fit.py`, however, for most stations there will usually
-be available a clock rate (and clock offset) derived from GPS. The clock rates from GPS are generally more accurate, as in this clock search
-only a small time range is correlated. Furthermore, the clock rate obtained from clock searching also contains the change in delay cause by \
-the atmosphere.
+be a clock rate (and clock offset) derived from GPS available. The clock rates from GPS are generally more accurate, as in this clock search
+only a small time range is correlated. Furthermore, the clock rates the clock rate obtained by clock searching do not only measure the 
+clock drift but are also affected by changes in local atmosphere above a station.
 
-It is possibel to not apply the rates using the option `-o`
+So in most cases, where there ere clock rates from GPS, we skip applying the delay rates in `update_vex.py` by using the option `-o`
 ```
 update_vex.py -o n24l2.vix n24l2.norates.vix clocks.json
 ```
 
-Re-correlating the experiment with the new clocks, and running `simple_fit.py` on the output
+Re-correlating the experiment with the new clocks (which included the clock rates), and running `simple_fit.py` on the output
 ```bash
 srun --mpi pmix -n 28 /opt/sfxc/bin/sfxc n24l2_no0004.ctrl n24l2.clk.vix 2>&1 | tee n24l2_no0004.log
 simple_fit.py -c n24l2_no0004.ctrl n24l2.vix Ef 
