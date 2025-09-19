@@ -48,7 +48,7 @@ onload = function(){
 
 In this tutorial we will go through all the steps required to correlate a simple experiment.  This entails the following steps:
 - create a vex file suitable for sfxc
-- create a correlator controll file
+- create a correlator control file
 - clock search the experiment
 - do the final correlation
 
@@ -57,7 +57,7 @@ FITS for use with AIPS or CASA will be subject of a later tutorial
 
 ## Optional: Install SFXC
 
-This step is only nessecary when this tutorial is followed on your hardware, SFXC is already installed on the workshop cluster.
+This step is only necessary when this tutorial is followed on your hardware, SFXC is already installed on the workshop cluster.
 
 The current prerequisites for SFXC on a recent Debian based system (like Ubuntu) is
 
@@ -115,14 +115,14 @@ wget -r -nd https://archive.jive.eu/sfxc-workshop/n24l2/ -A "n24l2*"
 While vex files drive both the correlator and observing stations, the vex files created by 
 scheduling software such as `sched` or `pysched` don't contain all the information needed 
 by the correlator. For example, it is missing the `$CLOCKS` and `$EOP` sections as these are 
-not known at time of scheduling. Furthermore, it is missing the appropiate `$THREADS`,  and or
+not known at time of scheduling. Furthermore, it is missing the appropriate `$THREADS`,  and or
 `$BITSTREAMS` sections as stations do not use this information directly.
 
 In the sfxc distribution there is a program called `prepare_vex.py` which take an observing vex 
 file created by `(py)sched` and adds these missing sections to the vex file. It will
 - Add a `$CLOCKS` section with all delays and rates set to zero
-- Fetch eop information from the [internet](ftps://gdc.cddis.eosdis.nasa.gov/vlbi/gsfc/ancillary/solve_apriori/usno_finals.erp) and create an `$EOP` section
-- Create `$THREADS` based on a set of hearistics, these heuristics know about the standard 
+- Fetch EOP information from the [internet](ftps://gdc.cddis.eosdis.nasa.gov/vlbi/gsfc/ancillary/solve_apriori/usno_finals.erp) and create an `$EOP` section
+- Create `$THREADS` based on a set of heuristics, these heuristics know about the standard 
 thread mappings of the DBBC2 (i.e. most EVN stations), VLBA, KVN, and e-merlin out-stations.
 However, because these are simply a set of heuristics it is possible that it will produce
 an incorrect `$THREADS` mapping. Furthermore, the script will not create `$BITSTREAMS` sections.
@@ -209,14 +209,14 @@ Now that we have a basic vex file we need to create a control file needed to run
 contain all the correlation parameters such as integration time, number of spectral channels,
 locations of data files, etc.
 
-In the SFXC distribition there is a script called `generate_job.py` that can be used to create a control file,
+In the SFXC distribution there is a script called `generate_job.py` that can be used to create a control file,
 it has a large number of options:
 
 ``` bash
 generate_jobs -h
 ```
 
-The data files for n24l2 on the cluser are (located in `/data/n24l2/files/`)
+The data files for n24l2 on the cluster are (located in `/data/n24l2/files/`)
 ```
 n24l2_cm_no0004.vdif  n24l2_cm_no0005.vdif  
 n24l2_de_no0004.vdif  n24l2_de_no0005.vdif
@@ -232,7 +232,7 @@ generate_jobs.py n24l2.vix -a 4,5 -n 2 -s Cm,De,Ef,Hh -C -c 1024 -i 2.0
 ```
 Lets unpack this command:
   * `-a 4,5`, generate control file only for scans 4 and 5 
-  * `-n 2`, by default ``generate_jobs.py`` will create seperate control files for each scan, this option tells the script to put two scan into the same control file
+  * `-n 2`, by default ``generate_jobs.py`` will create separate control files for each scan, this option tells the script to put two scan into the same control file
   * `-s Cm,De,Ef,Hh`, select which stations to use, default would be all stations
   * `-C`, enabled the correlation of the cross-polarisations (RCP vs LCP and vice versa)
   * `-c 1024`, set the number of spectral channels to 1024 in the output file
@@ -281,10 +281,11 @@ Inspecting the `$FREQ` section of the vex file shows that Cm, and De have two 64
 When no setup station is defined, SFXC will select the first station in the `stations` list as setup station, which is Cm in this case. 
 
 In this case, of course, Cm and De only observed half the total bandwidth of the other stations. So it would make sense to select e.g. Ef as the setup station
-to correlate all available data. However, this is not the only reason. When correlating a wide band agains a collection narrow bands, the correlator will 
-correlate each wider band agains a single narrow band. So in this case each 64 MHz is correlated agains one 32 MHz band, the remaining 50% of the band is filled with zeros.
+to correlate all available data. However, this is not the only reason. When correlating a wider band against a number of bands with that have a smaller bandwidth, 
+the correlator will correlate each wider band against a single narrow band. So in this case each 64 MHz is correlated against one 32 MHz band, the remaining 50% of 
+the band will be filled with zeros.
 
-Therefore we should, in almost all cases, select the station with the most narrow bandwidth as the setup statiom, in this case we use Ef
+Therefore we should, in almost all cases, select the station with the most narrow bandwidth as the setup station, in this case we use Ef
 ```bash
 generate_jobs.py n24l2.vix -a 4,5 -n 2 -s Cm,De,Ef,Hh -C -c 1024 -i 2 -S Ef
 ```
@@ -364,7 +365,8 @@ we don't expect full weights for the first integration.
 
 We can do a similar inspection for the other data file `/data/n24l2/files/n24l2_ef_no0005`, this shows that this file ends at 2024y144d12h47m13.000s.
 
-Looking a vdif files using this tool also shows the exact data format. On this case there is only a single VDIF thread (`thread_id = 0`), containing 8 channels per frame (`nchan = 8`),
+Looking at vdif files using this tool is also a way to find out what the exact data format was. 
+In this case there is only a single VDIF thread (`thread_id = 0`), containing 8 channels per frame (`nchan = 8`),
 matching what is in the `$THREADS` section of the vex file. VDIF frames can also be marked as invalid, in that case `invalid = 1`. 
 Invalid frames are flagged by the correlator and their data replaced with zeros.
 
@@ -407,7 +409,7 @@ Also note that in the control file we created in the previous section we defined
 ```yaml
     "delay_directory": "file:///home/workshop22/data/n24l2/delays",
 ```
-Before running the correlator we need to ensure this derectory exists
+Before running the correlator we need to ensure this directory exists
 ```bash
 mkdir -p /home/workshop22/data/n24l2/delays
 ```
@@ -428,7 +430,7 @@ or when running on your own hardware
 ```
 mpirun -n 12 --oversubscribe `which sfxc` n24l2_no0004.ctrl n24l2.vix 2>&1 | tee n24l2_no0004.log
 ```
-During the correlation SFXC will output various usefull messages to the console, in the example this output is saved in `n24l2_no0004.log`.
+During the correlation SFXC will output various useful messages to the console, in the example this output is saved in `n24l2_no0004.log`.
 
 For example SFXC will print the start times of each data file
 ```
@@ -471,7 +473,7 @@ freq = 1, sb = 1, pol = 1, levels: -- 0.119, -+ 0.215, +- 0.215, ++ 0.119, inval
 ```
 This output shows the sampler statics for station Ef. Here `freq` refers to the channel 
 frequency listed in the `$FREQ` section of the vex file, sb is the
-sideband where `sb=0` is lower sideband, and `sb=1` is upper sideband. And `pol=0` means RCP, while `pol=1` means LCP. 
+side-band where `sb=0` is lower side-band, and `sb=1` is upper side-band. And `pol=0` means RCP, while `pol=1` means LCP.
 
 As the data is quantised using 2 bits, there are 4 different levels a sample can have.
 The numbers show the total fraction of samples that had a certain state in an integration. 
@@ -509,22 +511,22 @@ freq = 1, sb = 0, pol = 1, fringe ampl = 0.000315, SNR = 5.603886, offset = -248
 freq = 1, sb = 0, pol = 2, fringe ampl = 0.000382, SNR = 6.696422, offset = 260, weight = 85444528.000000
 freq = 1, sb = 0, pol = 3, fringe ampl = 0.000314, SNR = 4.935712, offset = -403, weight = 85444528.000000
 ```
-Here `freq` and `sb` have the same meaning as earlier, but pol now refers to which cross-polarisation
+Here `freq` and `sb` have the same meaning as earlier, but `pol` now refers to which cross-polarisation
 product is being shown. There are four different possibilities
-  - pol=1 RCP - RCP
-  - pol=2 LCP - RCP
-  - pol=3 RCP - LCP
-  - pol=4 LCP - LCP
+  - `pol=0` RCP - RCP
+  - `pol=1` LCP - RCP
+  - `pol=2` RCP - LCP
+  - `pol=3` LCP - LCP
 
-Meaning that pol=2, and pol=3 are the cross-polarisation products, which we expect to have a low SNR. 
-When troubleshooting an experiment you may sometimes find that the cross-polarisions have a strong fringe while 
+Meaning that `pol=1`, and `pol=2` are the cross-polarisation products, which we expect to have a low SNR. 
+When troubleshooting an experiment you may sometimes find that the cross-polarisation have a strong fringe while 
 the parallel hands are weak. In that case the station likely swapped the two polarisation, which is easily rectified
 in the vex file.
 
 The output shows the fringe amplitude, SNR, and how many lags the fringe is offset from the centre. Ideally, the offset
 should be close to zero.
 
-We see that there is a fring between Cm and De, but not between Cm and Ef. In this tool `SNRs < 10` should not be trusted as detections.
+We see that there is a fringe between Cm and De, but not between Cm and Ef. In this tool `SNRs < 10` should not be trusted as detections.
 Scrolling down the file we see that there is also no fringe to Hh. 
 
 ### Increase the number of channels
@@ -678,7 +680,7 @@ It is possibel to not apply the rates using the option `-o`
 update_vex.py -o n24l2.vix n24l2.norates.vix clocks.json
 ```
 
-Recorrelating the experiment with the new clocks, and running `simple_fit.py` on the output
+Re-correlating the experiment with the new clocks, and running `simple_fit.py` on the output
 ```bash
 srun --mpi pmix -n 28 /opt/sfxc/bin/sfxc n24l2_no0004.ctrl n24l2.clk.vix 2>&1 | tee n24l2_no0004.log
 simple_fit.py -c n24l2_no0004.ctrl n24l2.vix Ef 
@@ -738,7 +740,7 @@ This gives clock offsets that are close to zero
 ## Final correlation
 
 Now that we have found the clocks we can reduce the number of spectral channels to a lower amount to get a
-more reasonbly size data set.
+more reasonably size data set.
 
 Set the number of channels to 64 in our control file
 ```yaml
@@ -755,14 +757,14 @@ Another useful diagnostic is plot the weights using the `weightplot.py`.
 ```bash
 weightplot.py n24l2.clk.vix n24l2_no0004.ctrl
 ```
-Note that this is a graphical application so it requires connecting with ssh -X to the cluster.
+Note that this is a graphical application so it requires connecting with `ssh -X` to the cluster.
 
 The output is a bit awkward because of the 5 minute gap between scans no0004 and no0005.
 Weights equal to one means that there was no missing data. We see that in the first integration we 
 were missing some data for Ef, and Hh. But also towards the end of our correlation run of scan no0005
 there was some missing data for De.
 
-<img src="figures/sfxc-tutorial/weighplot.png" alt="drawing" style="width: 60%;height: auto;" class="center"/>
+<img src="figures/sfxc-tutorial/weighplot.png" alt="drawing" style="width: 90%;height: auto;" class="center"/>
 
 <a name="fig-1">**Figure 1**</a> - *Weightplot of n24l2_no0004.ctrl*
 
@@ -770,9 +772,9 @@ A final diagnostic would be to create an html plot page.
 ```bash
 produce_html_plotpage.py -r Ef n24l2.clk.vix n24l2_no0004.ctrl
 ```
-Note that when running this on your own hardware, the script requires gnuplot and the gnuplotlib python package.
+Note that when running this on your own hardware, the script requires `gnuplot` and the `gnuplotlib` python package.
 
-The result is that for each of the two scans in the correlation it will create a webpage showing things like
+The result is that for each of the two scans in the correlation it will create a web page showing things like
 bandpasses, fringe SNR, sampler statistics, etc. The pages are located in directories No0004, and No0005.
 
 Because the output is html you need to copy it to your local machine in order to view it
@@ -781,9 +783,9 @@ scp -r workshop22@sfxc-e0.sfxc.jive.nl:/home/workshop22/data/n24l2/No0004 .
 scp -r workshop22@sfxc-e0.sfxc.jive.nl:/home/workshop22/data/n24l2/No0005 .
 ```
 
-Viewing the index.html contained in these directories in a webbrowser shows
+Viewing the index.html contained in these directories in a web browser shows
 
-<img src="figures/sfxc-tutorial/fringe-page.png" alt="drawing" style="width: 60%;height: auto;" class="center"/>
+<img src="figures/sfxc-tutorial/fringe-page.png" alt="drawing" style="width: 90%;height: auto;" class="center"/>
 
 <a name="fig-2">**Figure 2**</a> - *FTP fringe plot page for scan No0004*
 
